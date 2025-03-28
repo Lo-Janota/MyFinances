@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'add_expense_screen.dart'; // Tela para adicionar despesas
-import 'reports_screen.dart'; // Tela de relatórios, crie esse arquivo se ainda não existir
+import 'add_expense_screen.dart';
+import 'reports_screen.dart';
+import 'settings_screen.dart'; // Crie essa tela se ainda não existir
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -9,6 +10,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0; // Controla a aba selecionada
   double totalGasto = 1200.0;
   double limiteOrcamento = 2000.0;
   List<Map<String, dynamic>> despesas = [
@@ -17,45 +19,51 @@ class _HomeScreenState extends State<HomeScreen> {
     {'nome': 'Cinema', 'valor': 45.0, 'categoria': 'Lazer', 'data': '23/03'},
   ];
 
-  void _setBudgetLimit() async {
-    final newLimit = await showDialog<double>(
-      context: context,
-      builder: (context) {
-        double tempLimit = limiteOrcamento;
-        return AlertDialog(
-          title: Text('Defina um novo limite de orçamento'),
-          content: TextField(
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: 'Novo limite'),
-            onChanged: (value) {
-              tempLimit = double.tryParse(value) ?? tempLimit;
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, tempLimit);
-              },
-              child: Text('Salvar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (newLimit != null) {
-      setState(() {
-        limiteOrcamento = newLimit;
-      });
-    }
+  // Alterar a tela exibida
+  void _onTabTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> _screens = [
+      _buildHomeScreen(), // Tela principal
+      ReportsScreen(), // Tela de Relatórios
+      SettingsScreen(), // Tela de Configurações (perfil)
+    ];
+
+    return Scaffold(
+      body: _screens[_currentIndex], // Exibe a tela selecionada
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabTapped,
+        selectedItemColor: Color(0xFF6A11CB),
+        unselectedItemColor: Colors.grey,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Relatórios',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Configurações',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeScreen() {
     return Scaffold(
       appBar: AppBar(
         title: Text('Dashboard Financeiro'),
-        backgroundColor: Color(0xFF6A11CB), // Mesma cor da tela de login
+        backgroundColor: Color(0xFF6A11CB),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -69,45 +77,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _setBudgetLimit, // Botão para definir limite de orçamento
-            backgroundColor: Colors.orange,
-            child: Icon(Icons.attach_money),
-            tooltip: 'Definir Limite',
-          ),
-          SizedBox(height: 16),
-          FloatingActionButton(
-            onPressed: () async {
-              final newExpense = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddExpenseScreen()),
-              );
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final newExpense = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AddExpenseScreen()),
+          );
 
-              if (newExpense != null) {
-                setState(() {
-                  despesas.add(newExpense);
-                  totalGasto += newExpense['valor'];
-                });
-              }
-            },
-            child: Icon(Icons.add),
-            tooltip: 'Adicionar Despesa',
-          ),
-          SizedBox(height: 16),
-          FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ReportsScreen()), // Navega para os relatórios
-              );
-            },
-            child: Icon(Icons.bar_chart),
-            tooltip: 'Relatórios',
-          ),
-        ],
+          if (newExpense != null) {
+            setState(() {
+              despesas.add(newExpense);
+              totalGasto += newExpense['valor'];
+            });
+          }
+        },
+        child: Icon(Icons.add),
+        tooltip: 'Adicionar Despesa',
       ),
     );
   }

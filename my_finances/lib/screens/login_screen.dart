@@ -21,7 +21,7 @@ class LoginScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/logo.png', height: 120),
+                Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 30),
                 _buildTextField(Icons.email, 'Email', false),
                 const SizedBox(height: 15),
