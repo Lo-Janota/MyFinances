@@ -16,9 +16,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    // Aqui você pode integrar com Firebase Auth para enviar o e-mail real
-    // FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-
     _showNotification('Um link de redefinição foi enviado para $email');
   }
 
@@ -35,38 +32,78 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Esqueci a Senha'),
-        backgroundColor: Color(0xFF6A11CB),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Digite seu e-mail para redefinir a senha.',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/logo.png', height: 120),
+                const SizedBox(height: 30),
+                const Text(
+                  'Digite seu e-mail para redefinir a senha.',
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                _buildTextField(Icons.email, 'Email'),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _resetPassword,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const SizedBox(
+                    width: double.infinity,
+                    child: Center(
+                      child: Text('Enviar Link de Redefinição', style: TextStyle(fontSize: 18)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Voltar para a tela de login
+                  },
+                  child: const Text('Voltar para o Login', style: TextStyle(color: Colors.white)),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _resetPassword,
-              child: Text('Enviar Link de Redefinição'),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField(IconData icon, String label) {
+    return TextField(
+      controller: _emailController,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.2),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      keyboardType: TextInputType.emailAddress,
     );
   }
 }

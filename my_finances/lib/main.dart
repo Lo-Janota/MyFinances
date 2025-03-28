@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:device_preview/device_preview.dart'; // Importe o Device Preview
-import 'screens/login_screen.dart'; // Caminho correto
+import 'package:device_preview/device_preview.dart'; 
+import 'screens/login_screen.dart'; 
 
 void main() {
   runApp(
