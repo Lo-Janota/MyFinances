@@ -1,7 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  _RegisterScreenState createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
+  Future<void> _register() async {
+    setState(() => _isLoading = true);
+    try {
+      // Criação de usuário no Firebase Authentication
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // Atualizar o nome do usuário (não é obrigatório, mas pode ser útil)
+      await userCredential.user?.updateDisplayName(_nameController.text.trim());
+
+      // Navegar para a tela principal ou qualquer outra ação após cadastro
+      Navigator.pop(context); // Volta para a tela de login
+    } catch (e) {
+      // Mostrar erro caso algo dê errado
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: ${e.toString()}')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,31 +56,31 @@ class RegisterScreen extends StatelessWidget {
               children: [
                 Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 30),
-                _buildTextField(Icons.person, 'Nome', false),
+                _buildTextField(Icons.person, 'Nome', false, _nameController),
                 const SizedBox(height: 15),
-                _buildTextField(Icons.email, 'Email', false),
+                _buildTextField(Icons.email, 'Email', false, _emailController),
                 const SizedBox(height: 15),
-                _buildTextField(Icons.lock, 'Senha', true),
+                _buildTextField(Icons.lock, 'Senha', true, _passwordController),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    // Lógica para cadastrar usuário
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.blueAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const SizedBox(
-                    width: double.infinity,
-                    child: Center(
-                      child: Text('Cadastrar', style: TextStyle(fontSize: 18)),
-                    ),
-                  ),
-                ),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _register,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: Text('Cadastrar', style: TextStyle(fontSize: 18)),
+                          ),
+                        ),
+                      ),
                 const SizedBox(height: 15),
                 TextButton(
                   onPressed: () {
@@ -62,8 +96,9 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(IconData icon, String label, bool isPassword) {
+  Widget _buildTextField(IconData icon, String label, bool isPassword, TextEditingController controller) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(

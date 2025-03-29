@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -9,8 +10,9 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     String email = _emailController.text.trim();
 
     if (email.isEmpty) {
@@ -18,7 +20,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    _showNotification('Um link de redefinição foi enviado para $email');
+    try {
+      // Envia o link de redefinição de senha
+      await _auth.sendPasswordResetEmail(email: email);
+
+      // Exibe uma mensagem de sucesso
+      _showNotification('Um link de redefinição foi enviado para $email');
+    } catch (e) {
+      // Exibe uma mensagem de erro se algo der errado
+      _showNotification('Erro: ${e.toString()}');
+    }
   }
 
   void _showNotification(String message) {
@@ -26,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.blueAccent,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

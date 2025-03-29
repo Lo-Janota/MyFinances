@@ -1,10 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'register_screen.dart';
-import 'forgot_password_screen.dart'; // Importando a tela de redefinição
-import 'home_screen.dart'; // Importe a tela HomeScreen
+import 'forgot_password_screen.dart';
+import 'home_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,37 +56,32 @@ class LoginScreen extends StatelessWidget {
               children: [
                 Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 30),
-                _buildTextField(Icons.email, 'Email', false),
+                _buildTextField(Icons.email, 'Email', false, _emailController),
                 const SizedBox(height: 15),
-                _buildTextField(Icons.lock, 'Senha', true),
+                _buildTextField(Icons.lock, 'Senha', true, _passwordController),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    // Navega para a HomeScreen ao clicar no botão "Entrar"
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Color(0xFF2E8B57),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const SizedBox(
-                    width: double.infinity,
-                    child: Center(
-                      child: Text('Entrar', style: TextStyle(fontSize: 18)),
-                    ),
-                  ),
-                ),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Color(0xFF2E8B57),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: Text('Entrar', style: TextStyle(fontSize: 18)),
+                          ),
+                        ),
+                      ),
                 const SizedBox(height: 15),
                 TextButton(
                   onPressed: () {
-                    // Navega para a tela de redefinição de senha
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
@@ -80,8 +106,9 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(IconData icon, String label, bool isPassword) {
+  Widget _buildTextField(IconData icon, String label, bool isPassword, TextEditingController controller) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
