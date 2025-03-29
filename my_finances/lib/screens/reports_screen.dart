@@ -9,12 +9,14 @@ class ReportsScreen extends StatelessWidget {
     {'nome': 'Gasolina', 'valor': 100.0, 'categoria': 'Transporte', 'data': '21/03'},
   ];
 
+  ReportsScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Relatórios Financeiros'),
-        backgroundColor: Color(0xFF6A11CB), // Usando a mesma cor da tela inicial
+        backgroundColor: Color(0xFF2E8B57), // Usando a mesma cor da tela inicial
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

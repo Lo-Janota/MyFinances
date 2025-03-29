@@ -5,6 +5,8 @@ import 'reports_screen.dart';
 import 'settings_screen.dart'; // Crie essa tela se ainda não existir
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -28,18 +30,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _screens = [
+    final List<Widget> screens = [
       _buildHomeScreen(), // Tela principal
       ReportsScreen(), // Tela de Relatórios
       SettingsScreen(), // Tela de Configurações (perfil)
     ];
 
     return Scaffold(
-      body: _screens[_currentIndex], // Exibe a tela selecionada
+      body: screens[_currentIndex], // Exibe a tela selecionada
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
-        selectedItemColor: Color(0xFF6A11CB),
+        selectedItemColor: Color(0xFF2E8B57),
         unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(
@@ -63,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Dashboard Financeiro'),
-        backgroundColor: Color(0xFF6A11CB),
+        backgroundColor: Color(0xFF2E8B57),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -91,8 +93,8 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           }
         },
-        child: Icon(Icons.add),
         tooltip: 'Adicionar Despesa',
+        child: Icon(Icons.add),
       ),
     );
   }

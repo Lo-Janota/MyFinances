@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
   @override
   _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
 }
@@ -35,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            colors: [Color(0xFF2E8B57), Color(0xFF66CDAA)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -46,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/logo.png', height: 120),
+                Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 30),
                 const Text(
                   'Digite seu e-mail para redefinir a senha.',

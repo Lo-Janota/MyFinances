@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            colors: [Color(0xFF2E8B57), Color(0xFF66CDAA)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -18,7 +20,7 @@ class RegisterScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/logo.png', height: 120),
+                Image.asset('assets/images/logo.png', height: 120),
                 const SizedBox(height: 30),
                 _buildTextField(Icons.person, 'Nome', false),
                 const SizedBox(height: 15),

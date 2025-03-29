@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AddExpenseScreen extends StatefulWidget {
+  const AddExpenseScreen({super.key});
+
   @override
   _AddExpenseScreenState createState() => _AddExpenseScreenState();
 }

@@ -4,13 +4,15 @@ import 'forgot_password_screen.dart'; // Importando a tela de redefinição
 import 'home_screen.dart'; // Importe a tela HomeScreen
 
 class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            colors: [Color(0xFF2E8B57), Color(0xFF66CDAA)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -37,7 +39,7 @@ class LoginScreen extends StatelessWidget {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.blueAccent,
+                    foregroundColor: Color(0xFF2E8B57),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
