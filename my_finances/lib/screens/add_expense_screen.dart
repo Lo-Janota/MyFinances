@@ -10,13 +10,15 @@ class AddExpenseScreen extends StatefulWidget {
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _valorController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
   String _categoriaSelecionada = 'Alimentação';
 
   void _salvarDespesa() {
     String nome = _nomeController.text.trim();
     double? valor = double.tryParse(_valorController.text.trim());
+    String data = _dateController.text.trim();
 
-    if (nome.isEmpty || valor == null) {
+    if (nome.isEmpty || valor == null || data.isEmpty) {
       _mostrarNotificacao('Preencha todos os campos corretamente.');
       return;
     }
@@ -24,8 +26,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     Map<String, dynamic> novaDespesa = {
       'nome': nome,
       'valor': valor,
+      'data': data,
       'categoria': _categoriaSelecionada,
-      'data': DateTime.now().toString().substring(0, 10),
     };
 
     Navigator.pop(context, novaDespesa);
@@ -54,6 +56,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               decoration: InputDecoration(labelText: 'Valor (R\$)'),
               keyboardType: TextInputType.number,
             ),
+            TextField(
+              controller: _dateController,
+              decoration: InputDecoration(labelText: 'Data (dd/mm/aaaa)'),
+              keyboardType: TextInputType.datetime,
+            ),
             DropdownButton<String>(
               value: _categoriaSelecionada,
               onChanged: (String? newValue) {
@@ -61,7 +68,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   _categoriaSelecionada = newValue!;
                 });
               },
-              items: ['Alimentação', 'Transporte', 'Lazer']
+              items: ['Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Vestimentas','Outros']
                   .map((categoria) => DropdownMenuItem(value: categoria, child: Text(categoria)))
                   .toList(),
             ),
