@@ -17,25 +17,38 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    setState(() => _isLoading = true);
-    try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: ${e.toString()}')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
+ Future<void> _login() async {
+  setState(() => _isLoading = true);
+  try {
+    await _auth.signInWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    // Se o login for bem-sucedido, apenas navega para a tela Home
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => HomeScreen()),
+    );
+  } catch (e) {
+    // Exibir alerta de erro
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Erro ao Logar!'),
+        content: const Text('Usuário não encontrado. Verifique seus dados.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Fechar o alerta
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -16,26 +16,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   Future<void> _register() async {
-    setState(() => _isLoading = true);
-    try {
-      // Criação de usuário no Firebase Authentication
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+  setState(() => _isLoading = true);
+  try {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
-      // Atualizar o nome do usuário (não é obrigatório, mas pode ser útil)
-      await userCredential.user?.updateDisplayName(_nameController.text.trim());
+    await userCredential.user?.updateDisplayName(_nameController.text.trim());
 
-      // Navegar para a tela principal ou qualquer outra ação após cadastro
-      Navigator.pop(context); // Volta para a tela de login
-    } catch (e) {
-      // Mostrar erro caso algo dê errado
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: ${e.toString()}')));
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    // Exibir alerta de sucesso
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sucesso!'),
+        content: const Text('Usuário cadastrado com sucesso!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Fecha o alerta
+              Navigator.pop(context); // Volta para a tela de login
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    // Exibir alerta de erro
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Erro!'),
+        content: const Text('Erro ao Cadastrar! Verifique as informações.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Fechar o alerta
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
