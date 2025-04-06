@@ -35,20 +35,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   List<Map<String, dynamic>> get filteredDespesas {
-    return despesas.where((d) {
+  return despesas.where((d) {
+    try {
       final date = DateFormat('dd/MM/yyyy').parse(d['data']);
       final mesAno = DateFormat('MM/yyyy').format(date);
-      return mesAno == selectedMonth && (selectedCategory == null || d['categoria'] == selectedCategory);
-    }).toList();
-  }
+      return mesAno == selectedMonth &&
+             (selectedCategory == null || d['categoria'] == selectedCategory);
+    } catch (e) {
+      return false;
+    }
+  }).toList();
+}
+
 
   List<String> get categorias {
     return despesas.map((d) => d['categoria'].toString()).toSet().toList();
   }
 
   double calcularTotalCategoria(String categoria) {
-    return filteredDespesas.where((d) => d['categoria'] == categoria).fold(0.0, (soma, d) => soma + d['valor']);
-  }
+  return filteredDespesas
+      .where((d) => d['categoria'] == categoria && d['valor'] != null)
+      .fold(0.0, (soma, d) => soma + (d['valor'] is num ? d['valor'] : 0.0));
+}
+
 
   Widget _buildChart() {
     final data = categorias
@@ -90,13 +99,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildListaDespesas() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: filteredDespesas.map((d) {
-        return ListTile(
-          title: Text(d['descricao']),
-          subtitle: Text('${d['categoria']} - ${d['data']}'),
-          trailing: Text('${d['tipo'] == 'receita' ? '+' : '-'}R\$ ${d['valor'].toStringAsFixed(2)}'),
-        );
-      }).toList(),
+      children:
+          filteredDespesas.map((d) {
+            final descricao = d['descricao'] ?? 'Sem descrição';
+            final categoria = d['categoria'] ?? 'Sem categoria';
+            final data = d['data'] ?? 'Sem data';
+            final tipo = d['tipo'] ?? 'despesa';
+            final valor = (d['valor'] is num) ? d['valor'] : 0.0;
+
+            return ListTile(
+              title: Text(descricao),
+              subtitle: Text('$categoria - $data'),
+              trailing: Text(
+                '${tipo == 'receita' ? '+' : '-'}R\$ ${valor.toStringAsFixed(2)}',
+              ),
+            );
+          }).toList(),
     );
   }
 

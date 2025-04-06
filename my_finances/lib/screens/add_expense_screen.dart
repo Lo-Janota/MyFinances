@@ -80,7 +80,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
               TextFormField(
                 controller: _dataController,
-                decoration: const InputDecoration(labelText: 'Data (dd/mm)'),
+                decoration: const InputDecoration(labelText: 'Data (dd/mm/yyyy)'),
                 validator: (value) => value == null || value.isEmpty ? 'Informe uma data' : null,
               ),
               const SizedBox(height: 20),
