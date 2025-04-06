@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:my_finances/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'add_expense_screen.dart';
@@ -105,49 +106,63 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeScreen() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Financeiro'),
         backgroundColor: const Color(0xFF2E8B57),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.attach_money),
-            onPressed: () async {
-              final novoLimite = await showDialog<double>(
-                context: context,
-                builder: (context) {
-                  final controller = TextEditingController();
-                  return AlertDialog(
-                    title: const Text('Definir Limite de Orçamento'),
-                    content: TextField(
-                      controller: controller,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: 'Digite o valor do limite',
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancelar'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      ElevatedButton(
-                        child: const Text('Salvar'),
-                        onPressed: () {
-                          final valor = double.tryParse(controller.text);
-                          Navigator.pop(context, valor);
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
+        leading: IconButton(
+          icon: const Icon(Icons.logout, color: Colors.white),
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+              (route) => false,
+            );
+          },
+  ),
+  title: const Text(
+    'Dashboard Financeiro',
+    style: TextStyle(color: Colors.white),
+  ),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.attach_money, color: Colors.white),
+      onPressed: () async {
+        final novoLimite = await showDialog<double>(
+          context: context,
+          builder: (context) {
+            final controller = TextEditingController();
+            return AlertDialog(
+              title: const Text('Definir Limite de Orçamento'),
+              content: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  hintText: 'Digite o valor do limite',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  child: const Text('Salvar'),
+                  onPressed: () {
+                    final valor = double.tryParse(controller.text);
+                    Navigator.pop(context, valor);
+                  },
+                ),
+              ],
+            );
+          },
+        );
 
-              if (novoLimite != null) {
-                setState(() => limiteOrcamento = novoLimite);
-              }
-            },
-          ),
-        ],
-      ),
+        if (novoLimite != null) {
+          setState(() => limiteOrcamento = novoLimite);
+        }
+      },
+    ),
+  ],
+),
+
 
       body: Padding(
         padding: const EdgeInsets.all(16.0),
