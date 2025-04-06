@@ -1,4 +1,3 @@
-// home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -89,10 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Color(0xFF2E8B57),
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),
             label: 'Relatórios',
@@ -111,7 +107,48 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Dashboard Financeiro'),
         backgroundColor: const Color(0xFF2E8B57),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.attach_money),
+            onPressed: () async {
+              final novoLimite = await showDialog<double>(
+                context: context,
+                builder: (context) {
+                  final controller = TextEditingController();
+                  return AlertDialog(
+                    title: const Text('Definir Limite de Orçamento'),
+                    content: TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        hintText: 'Digite o valor do limite',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      ElevatedButton(
+                        child: const Text('Salvar'),
+                        onPressed: () {
+                          final valor = double.tryParse(controller.text);
+                          Navigator.pop(context, valor);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (novoLimite != null) {
+                setState(() => limiteOrcamento = novoLimite);
+              }
+            },
+          ),
+        ],
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -162,27 +199,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChart() {
-    Map<String, double> categorias = {};
-    for (var despesa in despesas) {
-      categorias[despesa['categoria']] = (categorias[despesa['categoria']] ?? 0) + despesa['valor'];
-    }
-
-    final sections = categorias.entries.map((entry) {
-      return PieChartSectionData(
-        value: entry.value,
-        title: entry.key,
-        radius: 50,
-        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-      );
-    }).toList();
-
-    return SizedBox(
-      height: 200,
-      child: PieChart(
-        PieChartData(sections: sections),
-      ),
-    );
+  Map<String, double> categorias = {};
+  for (var despesa in despesas) {
+    categorias[despesa['categoria']] = (categorias[despesa['categoria']] ?? 0) + despesa['valor'];
   }
+
+  final List<Color> cores = [
+    Colors.blue,
+    Colors.orange,
+    Colors.green,
+    Colors.purple,
+    Colors.red,
+    Colors.teal,
+    Colors.amber,
+    Colors.brown,
+    Colors.cyan,
+    Colors.indigo,
+  ];
+
+  int index = 0;
+  final sections = categorias.entries.map((entry) {
+    final color = cores[index % cores.length];
+    index++;
+    return PieChartSectionData(
+      value: entry.value,
+      color: color,
+      title: entry.key,
+      radius: 50,
+      titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+    );
+  }).toList();
+
+  return SizedBox(
+    height: 200,
+    child: PieChart(
+      PieChartData(sections: sections),
+    ),
+  );
+}
+
 
   Widget _buildTransactionHistory() {
     return ListView.builder(
@@ -203,7 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     final edited = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddExpenseScreen(existingExpense: item),
+                        builder:
+                            (context) =>
+                                AddExpenseScreen(existingExpense: item),
                       ),
                     );
                     if (edited != null) _editDespesa(index, edited);
