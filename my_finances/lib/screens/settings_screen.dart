@@ -28,26 +28,42 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   void _sendEmail() async {
-    final String subject = "Sugestão do App";
-    final String body =
-        "Nome: ${_nameController.text}\nSugestão:\n${_messageController.text}";
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'lorenzo.janota@icloud.com',
-      queryParameters: {
-        'subject': subject,
-        'body': body,
-      },
+  final String subject = "Sugestão do App";
+  final String body =
+      "Nome: ${_nameController.text}\nSugestão:\n${_messageController.text}";
+  final Uri emailUri = Uri(
+    scheme: 'mailto',
+    path: 'lorenzo.janota@icloud.com',
+    queryParameters: {
+      'subject': subject,
+      'body': body,
+    },
+  );
+
+  if (await canLaunchUrl(emailUri)) {
+    await launchUrl(emailUri);
+    
+    // Mostra a notificação de sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Sugestão enviada com sucesso!"),
+        backgroundColor: Colors.green,
+      ),
     );
 
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Não foi possível abrir o e-mail")),
-      );
-    }
+    // Limpa os campos após envio
+    _nameController.clear();
+    _messageController.clear();
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Não foi possível abrir o e-mail"),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

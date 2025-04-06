@@ -1,8 +1,11 @@
+// home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'add_expense_screen.dart';
 import 'reports_screen.dart';
-import 'settings_screen.dart'; // Crie essa tela se ainda não existir
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,16 +15,58 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0; // Controla a aba selecionada
-  double totalGasto = 1200.0;
+  int _currentIndex = 0;
+  double totalGasto = 0.0;
   double limiteOrcamento = 2000.0;
-  List<Map<String, dynamic>> despesas = [
-    {'nome': 'Almoço', 'valor': 50.0, 'categoria': 'Alimentação', 'data': '25/03'},
-    {'nome': 'Uber', 'valor': 20.0, 'categoria': 'Transporte', 'data': '24/03'},
-    {'nome': 'Cinema', 'valor': 45.0, 'categoria': 'Lazer', 'data': '23/03'},
-  ];
+  List<Map<String, dynamic>> despesas = [];
 
-  // Alterar a tela exibida
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? data = prefs.getString('despesas');
+    if (data != null) {
+      setState(() {
+        despesas = List<Map<String, dynamic>>.from(json.decode(data));
+        totalGasto = despesas.fold(0.0, (sum, item) => sum + item['valor']);
+      });
+    }
+  }
+
+  Future<void> _saveData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('despesas', json.encode(despesas));
+  }
+
+  void _addDespesa(Map<String, dynamic> despesa) {
+    setState(() {
+      despesas.add(despesa);
+      totalGasto += despesa['valor'];
+    });
+    _saveData();
+  }
+
+  void _editDespesa(int index, Map<String, dynamic> newDespesa) {
+    setState(() {
+      totalGasto -= despesas[index]['valor'];
+      despesas[index] = newDespesa;
+      totalGasto += newDespesa['valor'];
+    });
+    _saveData();
+  }
+
+  void _removeDespesa(int index) {
+    setState(() {
+      totalGasto -= despesas[index]['valor'];
+      despesas.removeAt(index);
+    });
+    _saveData();
+  }
+
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
@@ -31,19 +76,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      _buildHomeScreen(), // Tela principal
-      ReportsScreen(), // Tela de Relatórios
-      SettingsScreen(), // Tela de Configurações (perfil)
+      _buildHomeScreen(),
+      ReportsScreen(),
+      SettingsScreen(),
     ];
 
     return Scaffold(
-      body: screens[_currentIndex], // Exibe a tela selecionada
+      body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
         selectedItemColor: Color(0xFF2E8B57),
         unselectedItemColor: Colors.grey,
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
@@ -64,8 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeScreen() {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Dashboard Financeiro'),
-        backgroundColor: Color(0xFF2E8B57),
+        title: const Text('Dashboard Financeiro'),
+        backgroundColor: const Color(0xFF2E8B57),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -87,25 +132,23 @@ class _HomeScreenState extends State<HomeScreen> {
           );
 
           if (newExpense != null) {
-            setState(() {
-              despesas.add(newExpense);
-              totalGasto += newExpense['valor'];
-            });
+            _addDespesa(newExpense);
           }
         },
         tooltip: 'Adicionar Despesa',
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildBudgetIndicator() {
-    double percentage = totalGasto / limiteOrcamento;
+    double percentage = limiteOrcamento == 0 ? 0 : totalGasto / limiteOrcamento;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Orçamento: R\$${limiteOrcamento.toStringAsFixed(2)}',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         LinearProgressIndicator(
           value: percentage,
@@ -119,28 +162,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChart() {
+    Map<String, double> categorias = {};
+    for (var despesa in despesas) {
+      categorias[despesa['categoria']] = (categorias[despesa['categoria']] ?? 0) + despesa['valor'];
+    }
+
+    final sections = categorias.entries.map((entry) {
+      return PieChartSectionData(
+        value: entry.value,
+        title: entry.key,
+        radius: 50,
+        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+
     return SizedBox(
       height: 200,
       child: PieChart(
-        PieChartData(
-          sections: [
-            PieChartSectionData(
-              value: 40,
-              title: 'Alimentação',
-              color: Colors.blue,
-            ),
-            PieChartSectionData(
-              value: 30,
-              title: 'Transporte',
-              color: Colors.red,
-            ),
-            PieChartSectionData(
-              value: 30,
-              title: 'Lazer',
-              color: Colors.green,
-            ),
-          ],
-        ),
+        PieChartData(sections: sections),
       ),
     );
   }
@@ -154,7 +193,28 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListTile(
             title: Text(item['nome']),
             subtitle: Text('${item['categoria']} - ${item['data']}'),
-            trailing: Text('R\$${item['valor'].toStringAsFixed(2)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('R\$${item['valor'].toStringAsFixed(2)}'),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () async {
+                    final edited = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddExpenseScreen(existingExpense: item),
+                      ),
+                    );
+                    if (edited != null) _editDespesa(index, edited);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, size: 20),
+                  onPressed: () => _removeDespesa(index),
+                ),
+              ],
+            ),
           ),
         );
       },
