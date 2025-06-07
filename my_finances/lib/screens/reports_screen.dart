@@ -1,8 +1,11 @@
+// reports_screen.dart (VERSÃO CORRIGIDA E DEFINITIVA)
+
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+
+enum SortOptions { data, valor, nome }
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -12,178 +15,191 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  List<Map<String, dynamic>> despesas = [];
-  String selectedMonth = DateFormat('MM/yyyy').format(DateTime.now());
-  String? selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  String _searchQuery = "";
+  SortOptions _sortOption = SortOptions.data;
 
   @override
   void initState() {
     super.initState();
-    _loadDespesas();
-  }
-
-  Future<void> _loadDespesas() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? data = prefs.getString('despesas');
-    if (data != null) {
+    _searchController.addListener(() {
       setState(() {
-        despesas = List<Map<String, dynamic>>.from(
-          jsonDecode(data).map((e) => Map<String, dynamic>.from(e)),
-        );
+        _searchQuery = _searchController.text;
       });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ✅ LÓGICA DA QUERY TOTALMENTE REFEITA
+  Query _buildFirestoreQuery() {
+    Query query = FirebaseFirestore.instance
+        .collection('despesas')
+        .where('userId', isEqualTo: user!.uid);
+
+    // SE O USUÁRIO ESTIVER PESQUISANDO POR TEXTO...
+    if (_searchQuery.isNotEmpty) {
+      String queryLowerCase = _searchQuery.toLowerCase();
+      // Aplica o filtro de texto e FORÇA a ordenação por nome
+      query = query
+          .where('nome_lowercase', isGreaterThanOrEqualTo: queryLowerCase)
+          .where('nome_lowercase', isLessThanOrEqualTo: '$queryLowerCase\uf8ff')
+          .orderBy('nome_lowercase', descending: false);
+    } 
+    // SE A BARRA DE PESQUISA ESTIVER VAZIA...
+    else {
+      // Aplica a ordenação que o usuário escolheu
+      switch (_sortOption) {
+        case SortOptions.data:
+          query = query.orderBy('data', descending: true);
+          break;
+        case SortOptions.valor:
+          query = query.orderBy('valor', descending: true);
+          break;
+        case SortOptions.nome:
+          query = query.orderBy('nome_lowercase', descending: false);
+          break;
+      }
     }
-  }
-
-  List<Map<String, dynamic>> get filteredDespesas {
-  return despesas.where((d) {
-    try {
-      final date = DateFormat('dd/MM/yyyy').parse(d['data']);
-      final mesAno = DateFormat('MM/yyyy').format(date);
-      return mesAno == selectedMonth &&
-             (selectedCategory == null || d['categoria'] == selectedCategory);
-    } catch (e) {
-      return false;
-    }
-  }).toList();
-}
-
-
-  List<String> get categorias {
-    return despesas.map((d) => d['categoria'].toString()).toSet().toList();
-  }
-
-  double calcularTotalCategoria(String categoria) {
-  return filteredDespesas
-      .where((d) => d['categoria'] == categoria && d['valor'] != null)
-      .fold(0.0, (soma, d) => soma + (d['valor'] is num ? d['valor'] : 0.0));
-}
-
-
-  Widget _buildChart() {
-    final data = categorias
-        .where((cat) => calcularTotalCategoria(cat) > 0)
-        .map((cat) => PieChartSectionData(
-              value: calcularTotalCategoria(cat),
-              title: cat,
-              radius: 60,
-              color: Colors.primaries[categorias.indexOf(cat) % Colors.primaries.length],
-            ))
-        .toList();
-
-    return SizedBox(
-      height: 200,
-      child: PieChart(
-        PieChartData(
-          sections: data,
-          sectionsSpace: 2,
-          centerSpaceRadius: 30,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDespesasPorCategoria() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: categorias.map((cat) {
-        final total = calcularTotalCategoria(cat);
-        if (total == 0) return SizedBox.shrink();
-        return ListTile(
-          title: Text(cat),
-          trailing: Text('R\$ ${total.toStringAsFixed(2)}'),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildListaDespesas() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children:
-          filteredDespesas.map((d) {
-            final descricao = d['descricao'] ?? 'Sem descrição';
-            final categoria = d['categoria'] ?? 'Sem categoria';
-            final data = d['data'] ?? 'Sem data';
-            final tipo = d['tipo'] ?? 'despesa';
-            final valor = (d['valor'] is num) ? d['valor'] : 0.0;
-
-            return ListTile(
-              title: Text(descricao),
-              subtitle: Text('$categoria - $data'),
-              trailing: Text(
-                '${tipo == 'receita' ? '+' : '-'}R\$ ${valor.toStringAsFixed(2)}',
-              ),
-            );
-          }).toList(),
-    );
+    return query;
   }
 
   @override
   Widget build(BuildContext context) {
+    // A estrutura do build continua a mesma
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Relatórios'),
-        backgroundColor: Color(0xFF2E8B57),
-      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: selectedMonth,
-                      items: _getLastMonths().map((m) => DropdownMenuItem(
-                        value: m,
-                        child: Text(m),
-                      )).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedMonth = val!);
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: DropdownButton<String?>(
-                      isExpanded: true,
-                      value: selectedCategory,
-                      hint: Text('Categoria'),
-                      items: [null, ...categorias].map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(c ?? 'Todas'),
-                      )).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedCategory = val);
-                      },
-                    ),
-                  ),
-                ],
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(
+          children: [
+            _buildSearchPanel(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _buildFirestoreQuery().snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Erro: ${snapshot.error}"));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "Nenhum resultado encontrado.",
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    );
+                  }
+                  final docs = snapshot.data!.docs;
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      return _buildResultCard(data);
+                    },
+                  );
+                },
               ),
-              const SizedBox(height: 20),
-              Text('Gráfico por Categoria', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              _buildChart(),
-              const SizedBox(height: 20),
-              Text('Totais por Categoria', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              _buildDespesasPorCategoria(),
-              const SizedBox(height: 20),
-              Text('Gastos e Receitas do Mês', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              _buildListaDespesas(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  List<String> _getLastMonths() {
-    final now = DateTime.now();
-    return List.generate(12, (i) {
-      final date = DateTime(now.year, now.month - i, 1);
-      return DateFormat('MM/yyyy').format(date);
-    });
+  // ✅ PAINEL DE PESQUISA COM BOTÕES DESATIVADOS DINAMICAMENTE
+  Widget _buildSearchPanel() {
+    final bool isSearching = _searchQuery.isNotEmpty;
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Pesquisar por nome da despesa...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                suffixIcon: isSearching
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Ordenar por:", style: TextStyle(fontWeight: FontWeight.bold)),
+                Wrap(
+                  spacing: 8.0,
+                  children: [
+                    // O onSelected se torna null (desativado) se o usuário estiver pesquisando
+                    ChoiceChip(
+                      label: const Text('Data'),
+                      selected: !isSearching && _sortOption == SortOptions.data,
+                      onSelected: isSearching ? null : (selected) {
+                        setState(() => _sortOption = SortOptions.data);
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Valor'),
+                      selected: !isSearching && _sortOption == SortOptions.valor,
+                      onSelected: isSearching ? null : (selected) {
+                        setState(() => _sortOption = SortOptions.valor);
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('A-Z'),
+                      // A ordenação A-Z fica selecionada automaticamente durante a busca
+                      selected: isSearching || _sortOption == SortOptions.nome,
+                      onSelected: (selected) {
+                        setState(() => _sortOption = SortOptions.nome);
+                      },
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // O widget _buildResultCard continua o mesmo
+  Widget _buildResultCard(Map<String, dynamic> data) {
+    final String dataFormatada = data['data'] ?? 'Sem data';
+    final double valor = (data['valor'] as num?)?.toDouble() ?? 0.0;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+          child: Icon(Icons.local_mall_outlined, color: Theme.of(context).primaryColor),
+        ),
+        title: Text(data['nome'] ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('${data['categoria'] ?? 'Geral'}  •  $dataFormatada', style: const TextStyle(color: Colors.grey)),
+        trailing: Text('R\$ ${valor.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 15)),
+      ),
+    );
   }
 }

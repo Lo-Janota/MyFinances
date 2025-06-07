@@ -60,17 +60,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
 
     setState(() => _isLoading = true);
+    final nomeOriginal = _nomeController.text;
 
     // 3. Monta o objeto com os 5+ campos, incluindo o userId
     final expenseData = {
-      'userId': user.uid, // ✅ Requisito 4: Separa os dados por usuário
-      'nome': _nomeController.text,
+      'userId': user.uid,
+      'nome': nomeOriginal,
+      'nome_lowercase': nomeOriginal.toLowerCase(),
       'valor': double.tryParse(_valorController.text) ?? 0.0,
       'categoria': _categoriaController.text,
       'data': _dataController.text,
-      'criadoEm': FieldValue.serverTimestamp(), // Campo extra: Timestamp
+      'criadoEm': FieldValue.serverTimestamp(),
     };
-
     try {
       final firestore = FirebaseFirestore.instance;
       
