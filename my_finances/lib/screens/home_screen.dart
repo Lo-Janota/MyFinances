@@ -1,11 +1,16 @@
+// home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:my_finances/screens/add_expense_screen.dart';
+import 'package:my_finances/screens/add_goal_screen.dart';
+import 'package:my_finances/screens/add_income_screen.dart';
 import 'package:my_finances/screens/login_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'add_expense_screen.dart';
-import 'reports_screen.dart';
-import 'settings_screen.dart';
+import 'package:my_finances/screens/reports_screen.dart';
+import 'package:my_finances/screens/settings_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,55 +21,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  double totalGasto = 0.0;
-  double limiteOrcamento = 2000.0;
-  List<Map<String, dynamic>> despesas = [];
+  final User? user = FirebaseAuth.instance.currentUser;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? data = prefs.getString('despesas');
-    if (data != null) {
-      setState(() {
-        despesas = List<Map<String, dynamic>>.from(json.decode(data));
-        totalGasto = despesas.fold(0.0, (sum, item) => sum + item['valor']);
-      });
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     }
-  }
-
-  Future<void> _saveData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('despesas', json.encode(despesas));
-  }
-
-  void _addDespesa(Map<String, dynamic> despesa) {
-    setState(() {
-      despesas.add(despesa);
-      totalGasto += despesa['valor'];
-    });
-    _saveData();
-  }
-
-  void _editDespesa(int index, Map<String, dynamic> newDespesa) {
-    setState(() {
-      totalGasto -= despesas[index]['valor'];
-      despesas[index] = newDespesa;
-      totalGasto += newDespesa['valor'];
-    });
-    _saveData();
-  }
-
-  void _removeDespesa(int index) {
-    setState(() {
-      totalGasto -= despesas[index]['valor'];
-      despesas.removeAt(index);
-    });
-    _saveData();
   }
 
   void _onTabTapped(int index) {
@@ -76,214 +43,274 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      _buildHomeScreen(),
-      ReportsScreen(),
-      SettingsScreen(),
+      _buildHomeScreenContent(),
+      const ReportsScreen(),
+      const SettingsScreen(),
     ];
 
-    return Scaffold(
-      body: screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
-        selectedItemColor: Color(0xFF2E8B57),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Relatórios',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Configurações',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHomeScreen() {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF2E8B57),
         leading: IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => LoginScreen()),
-              (route) => false,
-            );
-          },
-  ),
-  title: const Text(
-    'Dashboard Financeiro',
-    style: TextStyle(color: Colors.white),
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.attach_money, color: Colors.white),
-      onPressed: () async {
-        final novoLimite = await showDialog<double>(
-          context: context,
-          builder: (context) {
-            final controller = TextEditingController();
-            return AlertDialog(
-              title: const Text('Definir Limite de Orçamento'),
-              content: TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: 'Digite o valor do limite',
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancelar'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                ElevatedButton(
-                  child: const Text('Salvar'),
-                  onPressed: () {
-                    final valor = double.tryParse(controller.text);
-                    Navigator.pop(context, valor);
-                  },
-                ),
-              ],
+          onPressed: _logout,
+        ),
+        title: const Text(
+          'Dashboard Financeiro',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabTapped,
+        selectedItemColor: const Color(0xFF2E8B57),
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Relatórios'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Configurações'),
+        ],
+      ),
+      floatingActionButton: _currentIndex == 0 ? _buildSpeedDial() : null,
+    );
+  }
+
+  // ✅ CONTEÚDO DA HOME TOTALMENTE REATIVO COM STREAMBUILDERS
+  Widget _buildHomeScreenContent() {
+  if (user == null) return const Center(child: Text("Usuário não logado."));
+
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance.collection('receitas').where('userId', isEqualTo: user!.uid).snapshots(),
+    builder: (context, receitasSnapshot) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('despesas').where('userId', isEqualTo: user!.uid).snapshots(),
+        builder: (context, despesasSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('metas').where('userId', isEqualTo: user!.uid).snapshots(),
+            builder: (context, metasSnapshot) {
+              
+              // ✅ VERIFICAÇÃO DE ERRO ADICIONADA
+              if (receitasSnapshot.hasError || despesasSnapshot.hasError || metasSnapshot.hasError) {
+                // Pega a primeira mensagem de erro que encontrar
+                final error = receitasSnapshot.error ?? despesasSnapshot.error ?? metasSnapshot.error;
+                return Center(child: Text("Ocorreu um erro: $error"));
+              }
+
+              // Estado de Carregamento
+              if (!receitasSnapshot.hasData || !despesasSnapshot.hasData || !metasSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // ... o resto do código continua igual
+              
+              final double totalReceitas = receitasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+              final double totalDespesas = despesasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+              
+              final despesasDocs = despesasSnapshot.data!.docs;
+              final metasDocs = metasSnapshot.data!.docs;
+
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildBudgetIndicator(totalDespesas, totalReceitas),
+                      const SizedBox(height: 16),
+                      // ✅ EXIBE O INDICADOR DE META AQUI (PROBLEMA 1 RESOLVIDO)
+                      _buildGoalProgressIndicator(metasDocs),
+                      const SizedBox(height: 16),
+                      _buildChart(despesasDocs),
+                      const SizedBox(height: 16),
+                      const Text("Histórico de Despesas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Expanded(child: _buildTransactionHistory(despesasDocs)),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
-
-        if (novoLimite != null) {
-          setState(() => limiteOrcamento = novoLimite);
-        }
       },
-    ),
-  ],
-),
+    );
+  }
+  
+  // ✅ NOVO WIDGET PARA EXIBIR O PROGRESSO DA META
+  Widget _buildGoalProgressIndicator(List<QueryDocumentSnapshot> metas) {
+    if (metas.isEmpty) {
+      // Se não houver metas, não mostra nada
+      return const SizedBox.shrink();
+    }
 
+    // Pega a meta mais recente
+    final meta = metas.first.data() as Map<String, dynamic>;
+    final titulo = meta['titulo'] ?? 'Minha Meta';
+    final valorAtual = (meta['valorAtual'] ?? 0.0).toDouble();
+    final valorAlvo = (meta['valorAlvo'] ?? 0.0).toDouble();
+    double percentage = valorAlvo == 0 ? 1 : valorAtual / valorAlvo;
+    if (percentage > 1) percentage = 1;
 
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBudgetIndicator(),
-            const SizedBox(height: 20),
-            _buildChart(),
-            const SizedBox(height: 20),
-            Expanded(child: _buildTransactionHistory()),
+            Text(
+              "Meta: $titulo",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4682B4)),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: percentage,
+              minHeight: 10,
+              backgroundColor: Colors.grey[300],
+              color: const Color(0xFF4682B4),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('R\$ ${valorAtual.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Alvo: R\$ ${valorAlvo.toStringAsFixed(2)}'),
+              ],
+            )
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final newExpense = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddExpenseScreen()),
-          );
-
-          if (newExpense != null) {
-            _addDespesa(newExpense);
-          }
-        },
-        tooltip: 'Adicionar Despesa',
-        child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildBudgetIndicator() {
-    double percentage = limiteOrcamento == 0 ? 0 : totalGasto / limiteOrcamento;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSpeedDial() {
+    // (O código do SpeedDial continua o mesmo)
+    return SpeedDial(
+      icon: Icons.add,
+      activeIcon: Icons.close,
+      backgroundColor: const Color(0xFF2E8B57),
+      foregroundColor: Colors.white,
       children: [
-        Text(
-          'Orçamento: R\$${limiteOrcamento.toStringAsFixed(2)}',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        SpeedDialChild(
+          child: const Icon(Icons.money_off),
+          label: 'Nova Despesa',
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
         ),
-        LinearProgressIndicator(
-          value: percentage,
-          backgroundColor: Colors.grey[300],
-          color: percentage > 0.8 ? Colors.red : Colors.green,
-          minHeight: 8,
+        SpeedDialChild(
+          child: const Icon(Icons.attach_money),
+          label: 'Nova Receita',
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomeScreen())),
         ),
-        Text('Gastos até agora: R\$${totalGasto.toStringAsFixed(2)}'),
+        SpeedDialChild(
+          child: const Icon(Icons.flag),
+          label: 'Nova Meta',
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen())),
+        ),
       ],
     );
   }
 
-  Widget _buildChart() {
-  Map<String, double> categorias = {};
-  for (var despesa in despesas) {
-    categorias[despesa['categoria']] = (categorias[despesa['categoria']] ?? 0) + despesa['valor'];
+  // ✅ WIDGETS DE UI ADAPTADOS - AGORA RECEBEM OS DADOS DOS STREAMS
+  
+  // (O restante dos widgets: _buildBudgetIndicator, _buildChart, _buildTransactionHistory, permanecem os mesmos da versão anterior)
+  Widget _buildBudgetIndicator(double totalGasto, double limiteOrcamento) {
+    double percentage = limiteOrcamento == 0 ? 0 : totalGasto / limiteOrcamento;
+    if (percentage > 1) percentage = 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Balanço Mensal (Receitas): R\$${limiteOrcamento.toStringAsFixed(2)}',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: percentage,
+          backgroundColor: Colors.grey[300],
+          color: percentage > 0.8 ? Colors.red : Colors.green,
+          minHeight: 10,
+        ),
+        const SizedBox(height: 4),
+        Text('Total de Despesas: R\$${totalGasto.toStringAsFixed(2)}'),
+      ],
+    );
   }
 
-  final List<Color> cores = [
-    Colors.blue,
-    Colors.orange,
-    Colors.green,
-    Colors.purple,
-    Colors.red,
-    Colors.teal,
-    Colors.amber,
-    Colors.brown,
-    Colors.cyan,
-    Colors.indigo,
-  ];
+  Widget _buildChart(List<QueryDocumentSnapshot> despesas) {
+    Map<String, double> categorias = {};
+    for (var despesa in despesas) {
+      final data = despesa.data() as Map<String, dynamic>;
+      final categoria = data['categoria'] as String? ?? 'Outros';
+      final valor = (data['valor'] as num?)?.toDouble() ?? 0.0;
+      categorias[categoria] = (categorias[categoria] ?? 0) + valor;
+    }
 
-  int index = 0;
-  final sections = categorias.entries.map((entry) {
-    final color = cores[index % cores.length];
-    index++;
-    return PieChartSectionData(
-      value: entry.value,
-      color: color,
-      title: entry.key,
-      radius: 50,
-      titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+    if (categorias.isEmpty) {
+      return const SizedBox(height: 200, child: Center(child: Text("Adicione despesas para ver o gráfico.")));
+    }
+    
+    final double totalDespesas = categorias.values.fold(0.0, (a,b) => a+b);
+
+    final List<Color> cores = [
+      Colors.blue, Colors.orange, Colors.green, Colors.purple, Colors.red, Colors.teal,
+    ];
+
+    int index = 0;
+    final sections = categorias.entries.map((entry) {
+      final color = cores[index % cores.length];
+      index++;
+      return PieChartSectionData(
+        value: entry.value,
+        color: color,
+        title: '${(entry.value / totalDespesas * 100).toStringAsFixed(0)}%',
+        radius: 60,
+        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+
+    return SizedBox(
+      height: 200,
+      child: PieChart(
+        PieChartData(
+          sections: sections,
+          centerSpaceRadius: 40,
+          sectionsSpace: 2,
+        ),
+      ),
     );
-  }).toList();
+  }
 
-  return SizedBox(
-    height: 200,
-    child: PieChart(
-      PieChartData(sections: sections),
-    ),
-  );
-}
-
-
-  Widget _buildTransactionHistory() {
+  Widget _buildTransactionHistory(List<QueryDocumentSnapshot> despesas) {
     return ListView.builder(
       itemCount: despesas.length,
       itemBuilder: (context, index) {
-        var item = despesas[index];
+        final doc = despesas[index];
+        final item = doc.data() as Map<String, dynamic>;
+        
         return Card(
           child: ListTile(
-            title: Text(item['nome']),
-            subtitle: Text('${item['categoria']} - ${item['data']}'),
+            title: Text(item['nome'] ?? 'Sem nome'),
+            subtitle: Text('${item['categoria'] ?? 'Sem Categoria'} - ${item['data'] ?? 'Sem data'}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('R\$${item['valor'].toStringAsFixed(2)}'),
+                Text('R\$${(item['valor'] ?? 0.0).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
-                  icon: const Icon(Icons.edit, size: 20),
-                  onPressed: () async {
-                    final edited = await Navigator.push(
+                  icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
+                  onPressed: () {
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (context) =>
-                                AddExpenseScreen(existingExpense: item),
+                        builder: (_) => AddExpenseScreen(existingExpense: item, docId: doc.id),
                       ),
                     );
-                    if (edited != null) _editDespesa(index, edited);
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, size: 20),
-                  onPressed: () => _removeDespesa(index),
+                  icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
+                  onPressed: () async {
+                    await FirebaseFirestore.instance.collection('despesas').doc(doc.id).delete();
+                  },
                 ),
               ],
             ),

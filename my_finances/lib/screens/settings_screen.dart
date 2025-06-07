@@ -128,7 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             children: [
               Icon(Icons.info, size: 20, color: Color(0xFF2E8B57)),
               SizedBox(width: 5),
-              Text("Versão: 1.0.0", style: TextStyle(fontSize: 16)),
+              Text("Versão: 2.1.0", style: TextStyle(fontSize: 16)),
             ],
           ),
           SizedBox(height: 10),

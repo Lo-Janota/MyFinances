@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddExpenseScreen extends StatefulWidget {
+  // O construtor continua o mesmo, útil para a função de editar
   final Map<String, dynamic>? existingExpense;
-  final int? index;
+  final String? docId; // Adicione docId para saber qual documento editar
 
-  const AddExpenseScreen({super.key, this.existingExpense, this.index});
+  const AddExpenseScreen({super.key, this.existingExpense, this.docId});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -16,6 +19,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   late TextEditingController _valorController;
   late TextEditingController _categoriaController;
   late TextEditingController _dataController;
+
+  bool _isLoading = false; // Para feedback visual (loading)
 
   @override
   void initState() {
@@ -35,15 +40,69 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
+  // ✅ FUNÇÃO DE SALVAR MODIFICADA
   Future<void> _saveExpense() async {
-    if (_formKey.currentState!.validate()) {
-      final newExpense = {
-        'nome': _nomeController.text,
-        'valor': double.tryParse(_valorController.text) ?? 0.0,
-        'categoria': _categoriaController.text,
-        'data': _dataController.text,
-      };
-      Navigator.pop(context, newExpense);
+    // 1. Valida o formulário
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // 2. Pega o usuário logado
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro: Nenhum usuário logado.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // 3. Monta o objeto com os 5+ campos, incluindo o userId
+    final expenseData = {
+      'userId': user.uid, // ✅ Requisito 4: Separa os dados por usuário
+      'nome': _nomeController.text,
+      'valor': double.tryParse(_valorController.text) ?? 0.0,
+      'categoria': _categoriaController.text,
+      'data': _dataController.text,
+      'criadoEm': FieldValue.serverTimestamp(), // Campo extra: Timestamp
+    };
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      
+      // Se estiver editando, usa 'update'. Se for novo, usa 'add'.
+      if (widget.docId != null) {
+        // Lógica de Edição
+        await firestore.collection('despesas').doc(widget.docId).update(expenseData);
+      } else {
+        // ✅ Requisito 1: Inserção na coleção 'despesas'
+        await firestore.collection('despesas').add(expenseData);
+      }
+
+      // ✅ Requisito 3: Mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Despesa salva com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Fecha a tela após o sucesso
+      if (mounted) Navigator.pop(context, true);
+
+    } catch (e) {
+      // ✅ Requisito 3: Mensagem de erro
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ocorreu um erro ao salvar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -68,7 +127,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               TextFormField(
                 controller: _valorController,
                 decoration: const InputDecoration(labelText: 'Valor (R\$)'),
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) => value == null || value.isEmpty ? 'Informe um valor' : null,
               ),
               TextFormField(
@@ -82,10 +141,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 validator: (value) => value == null || value.isEmpty ? 'Informe uma data' : null,
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _saveExpense,
-                child: const Text('Salvar'),
-              )
+              // Mostra um loading ou o botão de salvar
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _saveExpense,
+                      child: const Text('Salvar'),
+                    )
             ],
           ),
         ),
