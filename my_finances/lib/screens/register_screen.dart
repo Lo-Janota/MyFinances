@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,56 +13,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
 
   Future<void> _register() async {
-  setState(() => _isLoading = true);
-  try {
-    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
+    setState(() => _isLoading = true);
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    await userCredential.user?.updateDisplayName(_nameController.text.trim());
+      User? user = userCredential.user;
+      await user?.updateDisplayName(_nameController.text.trim());
 
-    // Exibir alerta de sucesso
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sucesso!'),
-        content: const Text('Usuário cadastrado com sucesso!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Fecha o alerta
-              Navigator.pop(context); // Volta para a tela de login
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  } catch (e) {
-    // Exibir alerta de erro
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Erro!'),
-        content: const Text('Erro ao Cadastrar! Verifique as informações.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), // Fechar o alerta
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  } finally {
-    setState(() => _isLoading = false);
+      // Salvar dados adicionais no Firestore
+      await FirebaseFirestore.instance.collection('usuarios').doc(user?.uid).set({
+        'uid': user?.uid,
+        'nome': _nameController.text.trim(),
+        'telefone': _phoneController.text.trim(),
+        'email': _emailController.text.trim(),
+        'criadoEm': Timestamp.now(),
+      });
+
+      // Alerta de sucesso
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Sucesso!'),
+          content: const Text('Usuário cadastrado com sucesso!'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Fecha alerta
+                Navigator.pop(context); // Volta para a tela de login
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Alerta de erro
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Erro!'),
+          content: Text('Erro ao cadastrar: ${e.toString()}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -77,44 +89,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/images/logo.png', height: 120),
-                const SizedBox(height: 30),
-                _buildTextField(Icons.person, 'Nome', false, _nameController),
-                const SizedBox(height: 15),
-                _buildTextField(Icons.email, 'Email', false, _emailController),
-                const SizedBox(height: 15),
-                _buildTextField(Icons.lock, 'Senha', true, _passwordController),
-                const SizedBox(height: 20),
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.blueAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/logo.png', height: 120),
+                  const SizedBox(height: 30),
+                  _buildTextField(Icons.person, 'Nome', false, _nameController),
+                  const SizedBox(height: 15),
+                  _buildTextField(Icons.phone, 'Telefone', false, _phoneController),
+                  const SizedBox(height: 15),
+                  _buildTextField(Icons.email, 'Email', false, _emailController),
+                  const SizedBox(height: 15),
+                  _buildTextField(Icons.lock, 'Senha', true, _passwordController),
+                  const SizedBox(height: 20),
+                  _isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                          onPressed: _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const SizedBox(
+                            width: double.infinity,
+                            child: Center(
+                              child: Text('Cadastrar', style: TextStyle(fontSize: 18)),
+                            ),
                           ),
                         ),
-                        child: const SizedBox(
-                          width: double.infinity,
-                          child: Center(
-                            child: Text('Cadastrar', style: TextStyle(fontSize: 18)),
-                          ),
-                        ),
-                      ),
-                const SizedBox(height: 15),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Voltar para a tela de login
-                  },
-                  child: const Text('Já tem uma conta? Entrar', style: TextStyle(color: Colors.white)),
-                ),
-              ],
+                  const SizedBox(height: 15),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Voltar para a tela de login
+                    },
+                    child: const Text('Já tem uma conta? Entrar', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -138,7 +154,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           borderSide: BorderSide.none,
         ),
       ),
-      keyboardType: isPassword ? TextInputType.text : TextInputType.emailAddress,
+      keyboardType: label == 'Telefone'
+          ? TextInputType.phone
+          : isPassword
+              ? TextInputType.text
+              : TextInputType.emailAddress,
     );
   }
 }
