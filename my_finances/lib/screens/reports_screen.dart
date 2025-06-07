@@ -117,71 +117,74 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ✅ PAINEL DE PESQUISA COM BOTÕES DESATIVADOS DINAMICAMENTE
   Widget _buildSearchPanel() {
-    final bool isSearching = _searchQuery.isNotEmpty;
+  final bool isSearching = _searchQuery.isNotEmpty;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Pesquisar por nome da despesa...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                suffixIcon: isSearching
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
+  return Card(
+    elevation: 4,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // Alinha o texto à esquerda
+        children: [
+          // Campo de Texto para a Pesquisa (continua igual)
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              labelText: 'Pesquisar por nome da despesa...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    )
+                  : null,
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Ordenar por:", style: TextStyle(fontWeight: FontWeight.bold)),
-                Wrap(
-                  spacing: 8.0,
-                  children: [
-                    // O onSelected se torna null (desativado) se o usuário estiver pesquisando
-                    ChoiceChip(
-                      label: const Text('Data'),
-                      selected: !isSearching && _sortOption == SortOptions.data,
-                      onSelected: isSearching ? null : (selected) {
-                        setState(() => _sortOption = SortOptions.data);
-                      },
-                    ),
-                    ChoiceChip(
-                      label: const Text('Valor'),
-                      selected: !isSearching && _sortOption == SortOptions.valor,
-                      onSelected: isSearching ? null : (selected) {
-                        setState(() => _sortOption = SortOptions.valor);
-                      },
-                    ),
-                    ChoiceChip(
-                      label: const Text('A-Z'),
-                      // A ordenação A-Z fica selecionada automaticamente durante a busca
-                      selected: isSearching || _sortOption == SortOptions.nome,
-                      onSelected: (selected) {
-                        setState(() => _sortOption = SortOptions.nome);
-                      },
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          
+          // ✅ AQUI ESTÁ A MUDANÇA: Usando Wrap para a linha de ordenação
+          Wrap(
+            spacing: 8.0, // Espaçamento horizontal entre os itens
+            runSpacing: 4.0, // Espaçamento vertical se quebrar a linha
+            crossAxisAlignment: WrapCrossAlignment.center, // Alinha verticalmente
+            children: [
+              const Text("Ordenar por:", style: TextStyle(fontWeight: FontWeight.bold)),
+              
+              // Botões de Ordenação
+              ChoiceChip(
+                label: const Text('Data'),
+                selected: !isSearching && _sortOption == SortOptions.data,
+                onSelected: isSearching ? null : (selected) {
+                  setState(() => _sortOption = SortOptions.data);
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Valor'),
+                selected: !isSearching && _sortOption == SortOptions.valor,
+                onSelected: isSearching ? null : (selected) {
+                  setState(() => _sortOption = SortOptions.valor);
+                },
+              ),
+              ChoiceChip(
+                label: const Text('A-Z'),
+                selected: isSearching || _sortOption == SortOptions.nome,
+                onSelected: (selected) {
+                  setState(() => _sortOption = SortOptions.nome);
+                },
+              ),
+            ],
+          )
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // O widget _buildResultCard continua o mesmo
   Widget _buildResultCard(Map<String, dynamic> data) {

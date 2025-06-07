@@ -1,4 +1,4 @@
-// home_screen.dart
+// home_screen.dart (VERSÃO COM O LAYOUT CORRIGIDO)
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,6 +8,7 @@ import 'package:my_finances/screens/add_income_screen.dart';
 import 'package:my_finances/screens/login_screen.dart';
 import 'package:my_finances/screens/reports_screen.dart';
 import 'package:my_finances/screens/settings_screen.dart';
+import 'package:my_finances/screens/history_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
@@ -23,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final User? user = FirebaseAuth.instance.currentUser;
 
-  // ... (As funções _logout e _onTabTapped continuam iguais)
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -41,32 +41,26 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-
-  // ✅ PASSO 1: LÓGICA PARA VERIFICAR SE A META EXISTE
   Future<void> _handleMetaButtonTap() async {
     if (user == null) return;
-
-    // Busca no Firebase se já existe alguma meta para este usuário
     final metaQuery = await FirebaseFirestore.instance
         .collection('metas')
         .where('userId', isEqualTo: user!.uid)
-        .limit(1) // Limita a 1, só precisamos saber se existe ou não
+        .limit(1)
         .get();
-
     if (metaQuery.docs.isNotEmpty) {
-      // Se a lista não estiver vazia, significa que JÁ EXISTE uma meta.
-      // Mostra o pop-up de decisão.
       final existingGoalDoc = metaQuery.docs.first;
       if (mounted) _showExistingGoalDialog(existingGoalDoc);
     } else {
-      // Se a lista estiver vazia, o usuário NÃO TEM meta.
-      // Abre a tela de criação normalmente.
-      if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+      if (mounted) {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+      }
     }
   }
 
-  // ✅ PASSO 2: FUNÇÃO QUE CRIA O POP-UP DE DECISÃO
-  Future<void> _showExistingGoalDialog(DocumentSnapshot existingGoalDoc) async {
+  Future<void> _showExistingGoalDialog(
+      DocumentSnapshot existingGoalDoc) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -90,25 +84,24 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               child: const Text('Excluir e Criar Nova'),
               onPressed: () async {
-                // Deleta a meta antiga
                 await existingGoalDoc.reference.delete();
-                // Fecha o pop-up
                 if (mounted) Navigator.of(context).pop();
-                // Abre a tela para criar uma nova meta
-                if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+                if (mounted) {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+                }
               },
             ),
             ElevatedButton(
               child: const Text('Editar Meta'),
               onPressed: () {
-                // Fecha o pop-up
                 Navigator.of(context).pop();
-                // Abre a tela de meta no modo de edição
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => AddGoalScreen(
-                      existingGoal: existingGoalDoc.data() as Map<String, dynamic>,
+                      existingGoal:
+                          existingGoalDoc.data() as Map<String, dynamic>,
                       docId: existingGoalDoc.id,
                     ),
                   ),
@@ -123,36 +116,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (o início do seu build continua igual) ...
-    // ... (AppBar, body, BottomNavigationBar...) ...
     final List<Widget> screens = [
       _buildHomeScreenContent(),
       const ReportsScreen(),
+      const HistoryScreen(),
       const SettingsScreen(),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2E8B57),
-        leading: IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
-          onPressed: _logout,
-        ),
-        title: const Text(
-          'Dashboard Financeiro',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+      // ✅ 1. APPBAR PRINCIPAL RESTAURADA
+      // Ela só vai aparecer na primeira tela (Home)
+      appBar: _currentIndex == 0
+          ? AppBar(
+              backgroundColor: const Color(0xFF2E8B57),
+              leading: IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: _logout,
+              ),
+              title: const Text(
+                'Dashboard Financeiro',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          : null, // Nas outras telas, a AppBar fica oculta
       body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
         selectedItemColor: const Color(0xFF2E8B57),
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Relatórios'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Configurações'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.search), label: 'Pesquisa'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.history), label: 'Histórico'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Ajustes'),
         ],
       ),
       floatingActionButton: _currentIndex == 0 ? _buildSpeedDial() : null,
@@ -169,47 +170,64 @@ class _HomeScreenState extends State<HomeScreen> {
         SpeedDialChild(
           child: const Icon(Icons.money_off),
           label: 'Nova Despesa',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
         ),
         SpeedDialChild(
           child: const Icon(Icons.attach_money),
           label: 'Nova Receita',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomeScreen())),
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const AddIncomeScreen())),
         ),
         SpeedDialChild(
           child: const Icon(Icons.flag),
           label: 'Nova Meta',
-          // ✅ PASSO 3: O BOTÃO AGORA CHAMA NOSSA NOVA LÓGICA
           onTap: _handleMetaButtonTap,
         ),
       ],
     );
   }
 
-  // O resto dos seus widgets (_buildHomeScreenContent, _buildGoalProgressIndicator, etc.) continua exatamente igual a antes
+  // ✅ 2. APPBAR DUPLICADA REMOVIDA DE DENTRO DESTE WIDGET
   Widget _buildHomeScreenContent() {
     if (user == null) return const Center(child: Text("Usuário não logado."));
-
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('receitas').where('userId', isEqualTo: user!.uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('receitas')
+          .where('userId', isEqualTo: user!.uid)
+          .snapshots(),
       builder: (context, receitasSnapshot) {
         return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('despesas').where('userId', isEqualTo: user!.uid).snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('despesas')
+              .where('userId', isEqualTo: user!.uid)
+              .snapshots(),
           builder: (context, despesasSnapshot) {
             return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('metas').where('userId', isEqualTo: user!.uid).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('metas')
+                  .where('userId', isEqualTo: user!.uid)
+                  .snapshots(),
               builder: (context, metasSnapshot) {
-                if (receitasSnapshot.hasError || despesasSnapshot.hasError || metasSnapshot.hasError) {
-                  final error = receitasSnapshot.error ?? despesasSnapshot.error ?? metasSnapshot.error;
+                if (receitasSnapshot.hasError ||
+                    despesasSnapshot.hasError ||
+                    metasSnapshot.hasError) {
+                  final error = receitasSnapshot.error ??
+                      despesasSnapshot.error ??
+                      metasSnapshot.error;
                   return Center(child: Text("Ocorreu um erro: $error"));
                 }
-                if (!receitasSnapshot.hasData || !despesasSnapshot.hasData || !metasSnapshot.hasData) {
+                if (!receitasSnapshot.hasData ||
+                    !despesasSnapshot.hasData ||
+                    !metasSnapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final double totalReceitas = receitasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
-                final double totalDespesas = despesasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
-                
+                final double totalReceitas = receitasSnapshot.data!.docs.fold(
+                    0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+                final double totalDespesas = despesasSnapshot.data!.docs.fold(
+                    0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+
                 final despesasDocs = despesasSnapshot.data!.docs;
                 final metasDocs = metasSnapshot.data!.docs;
 
@@ -218,13 +236,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // A AppBar que estava aqui foi removida.
                       _buildBudgetIndicator(totalDespesas, totalReceitas),
                       const SizedBox(height: 16),
                       _buildGoalProgressIndicator(metasDocs),
                       const SizedBox(height: 16),
                       _buildChart(despesasDocs),
                       const SizedBox(height: 16),
-                      const Text("Histórico de Despesas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text("Histórico de Despesas",
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       Expanded(child: _buildTransactionHistory(despesasDocs)),
                     ],
                   ),
@@ -257,7 +278,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               "Meta: $titulo",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4682B4)),
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4682B4)),
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
@@ -270,7 +294,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('R\$ ${valorAtual.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('R\$ ${valorAtual.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('Alvo: R\$ ${valorAlvo.toStringAsFixed(2)}'),
               ],
             )
@@ -314,13 +339,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (categorias.isEmpty) {
-      return const SizedBox(height: 200, child: Center(child: Text("Adicione despesas para ver o gráfico.")));
+      return const SizedBox(
+          height: 200,
+          child: Center(child: Text("Adicione despesas para ver o gráfico.")));
     }
-    
-    final double totalDespesas = categorias.values.fold(0.0, (a,b) => a+b);
+
+    final double totalDespesas =
+        categorias.values.fold(0.0, (a, b) => a + b);
 
     final List<Color> cores = [
-      Colors.blue, Colors.orange, Colors.green, Colors.purple, Colors.red, Colors.teal,
+      Colors.blue,
+      Colors.orange,
+      Colors.green,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
     ];
 
     int index = 0;
@@ -332,7 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
         color: color,
         title: '${(entry.value / totalDespesas * 100).toStringAsFixed(0)}%',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
       );
     }).toList();
 
@@ -354,30 +388,37 @@ class _HomeScreenState extends State<HomeScreen> {
       itemBuilder: (context, index) {
         final doc = despesas[index];
         final item = doc.data() as Map<String, dynamic>;
-        
+
         return Card(
           child: ListTile(
             title: Text(item['nome'] ?? 'Sem nome'),
-            subtitle: Text('${item['categoria'] ?? 'Sem Categoria'} - ${item['data'] ?? 'Sem data'}'),
+            subtitle: Text(
+                '${item['categoria'] ?? 'Sem Categoria'} - ${item['data'] ?? 'Sem data'}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('R\$${(item['valor'] ?? 0.0).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('R\$${(item['valor'] ?? 0.0).toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => AddExpenseScreen(existingExpense: item, docId: doc.id),
+                        builder: (_) => AddExpenseScreen(
+                            existingExpense: item, docId: doc.id),
                       ),
                     );
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
+                  icon: const Icon(Icons.delete,
+                      size: 20, color: Colors.redAccent),
                   onPressed: () async {
-                    await FirebaseFirestore.instance.collection('despesas').doc(doc.id).delete();
+                    await FirebaseFirestore.instance
+                        .collection('despesas')
+                        .doc(doc.id)
+                        .delete();
                   },
                 ),
               ],
