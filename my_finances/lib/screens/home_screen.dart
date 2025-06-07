@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final User? user = FirebaseAuth.instance.currentUser;
 
+  // ... (As funções _logout e _onTabTapped continuam iguais)
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -40,8 +41,90 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+
+  // ✅ PASSO 1: LÓGICA PARA VERIFICAR SE A META EXISTE
+  Future<void> _handleMetaButtonTap() async {
+    if (user == null) return;
+
+    // Busca no Firebase se já existe alguma meta para este usuário
+    final metaQuery = await FirebaseFirestore.instance
+        .collection('metas')
+        .where('userId', isEqualTo: user!.uid)
+        .limit(1) // Limita a 1, só precisamos saber se existe ou não
+        .get();
+
+    if (metaQuery.docs.isNotEmpty) {
+      // Se a lista não estiver vazia, significa que JÁ EXISTE uma meta.
+      // Mostra o pop-up de decisão.
+      final existingGoalDoc = metaQuery.docs.first;
+      if (mounted) _showExistingGoalDialog(existingGoalDoc);
+    } else {
+      // Se a lista estiver vazia, o usuário NÃO TEM meta.
+      // Abre a tela de criação normalmente.
+      if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+    }
+  }
+
+  // ✅ PASSO 2: FUNÇÃO QUE CRIA O POP-UP DE DECISÃO
+  Future<void> _showExistingGoalDialog(DocumentSnapshot existingGoalDoc) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Meta já existente'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Você já possui uma meta. O que deseja fazer?'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Excluir e Criar Nova'),
+              onPressed: () async {
+                // Deleta a meta antiga
+                await existingGoalDoc.reference.delete();
+                // Fecha o pop-up
+                if (mounted) Navigator.of(context).pop();
+                // Abre a tela para criar uma nova meta
+                if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen()));
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Editar Meta'),
+              onPressed: () {
+                // Fecha o pop-up
+                Navigator.of(context).pop();
+                // Abre a tela de meta no modo de edição
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddGoalScreen(
+                      existingGoal: existingGoalDoc.data() as Map<String, dynamic>,
+                      docId: existingGoalDoc.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // ... (o início do seu build continua igual) ...
+    // ... (AppBar, body, BottomNavigationBar...) ...
     final List<Widget> screens = [
       _buildHomeScreenContent(),
       const ReportsScreen(),
@@ -76,39 +159,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ✅ CONTEÚDO DA HOME TOTALMENTE REATIVO COM STREAMBUILDERS
+  Widget _buildSpeedDial() {
+    return SpeedDial(
+      icon: Icons.add,
+      activeIcon: Icons.close,
+      backgroundColor: const Color(0xFF2E8B57),
+      foregroundColor: Colors.white,
+      children: [
+        SpeedDialChild(
+          child: const Icon(Icons.money_off),
+          label: 'Nova Despesa',
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.attach_money),
+          label: 'Nova Receita',
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomeScreen())),
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.flag),
+          label: 'Nova Meta',
+          // ✅ PASSO 3: O BOTÃO AGORA CHAMA NOSSA NOVA LÓGICA
+          onTap: _handleMetaButtonTap,
+        ),
+      ],
+    );
+  }
+
+  // O resto dos seus widgets (_buildHomeScreenContent, _buildGoalProgressIndicator, etc.) continua exatamente igual a antes
   Widget _buildHomeScreenContent() {
-  if (user == null) return const Center(child: Text("Usuário não logado."));
+    if (user == null) return const Center(child: Text("Usuário não logado."));
 
-  return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance.collection('receitas').where('userId', isEqualTo: user!.uid).snapshots(),
-    builder: (context, receitasSnapshot) {
-      return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('despesas').where('userId', isEqualTo: user!.uid).snapshots(),
-        builder: (context, despesasSnapshot) {
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('metas').where('userId', isEqualTo: user!.uid).snapshots(),
-            builder: (context, metasSnapshot) {
-              
-              // ✅ VERIFICAÇÃO DE ERRO ADICIONADA
-              if (receitasSnapshot.hasError || despesasSnapshot.hasError || metasSnapshot.hasError) {
-                // Pega a primeira mensagem de erro que encontrar
-                final error = receitasSnapshot.error ?? despesasSnapshot.error ?? metasSnapshot.error;
-                return Center(child: Text("Ocorreu um erro: $error"));
-              }
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('receitas').where('userId', isEqualTo: user!.uid).snapshots(),
+      builder: (context, receitasSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('despesas').where('userId', isEqualTo: user!.uid).snapshots(),
+          builder: (context, despesasSnapshot) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('metas').where('userId', isEqualTo: user!.uid).snapshots(),
+              builder: (context, metasSnapshot) {
+                if (receitasSnapshot.hasError || despesasSnapshot.hasError || metasSnapshot.hasError) {
+                  final error = receitasSnapshot.error ?? despesasSnapshot.error ?? metasSnapshot.error;
+                  return Center(child: Text("Ocorreu um erro: $error"));
+                }
+                if (!receitasSnapshot.hasData || !despesasSnapshot.hasData || !metasSnapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              // Estado de Carregamento
-              if (!receitasSnapshot.hasData || !despesasSnapshot.hasData || !metasSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // ... o resto do código continua igual
-              
-              final double totalReceitas = receitasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
-              final double totalDespesas = despesasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
-              
-              final despesasDocs = despesasSnapshot.data!.docs;
-              final metasDocs = metasSnapshot.data!.docs;
+                final double totalReceitas = receitasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+                final double totalDespesas = despesasSnapshot.data!.docs.fold(0.0, (sum, doc) => sum + (doc['valor'] ?? 0.0));
+                
+                final despesasDocs = despesasSnapshot.data!.docs;
+                final metasDocs = metasSnapshot.data!.docs;
 
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -117,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _buildBudgetIndicator(totalDespesas, totalReceitas),
                       const SizedBox(height: 16),
-                      // ✅ EXIBE O INDICADOR DE META AQUI (PROBLEMA 1 RESOLVIDO)
                       _buildGoalProgressIndicator(metasDocs),
                       const SizedBox(height: 16),
                       _buildChart(despesasDocs),
@@ -134,15 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-  
-  // ✅ NOVO WIDGET PARA EXIBIR O PROGRESSO DA META
+
   Widget _buildGoalProgressIndicator(List<QueryDocumentSnapshot> metas) {
     if (metas.isEmpty) {
-      // Se não houver metas, não mostra nada
       return const SizedBox.shrink();
     }
-
-    // Pega a meta mais recente
     final meta = metas.first.data() as Map<String, dynamic>;
     final titulo = meta['titulo'] ?? 'Minha Meta';
     final valorAtual = (meta['valorAtual'] ?? 0.0).toDouble();
@@ -182,36 +280,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSpeedDial() {
-    // (O código do SpeedDial continua o mesmo)
-    return SpeedDial(
-      icon: Icons.add,
-      activeIcon: Icons.close,
-      backgroundColor: const Color(0xFF2E8B57),
-      foregroundColor: Colors.white,
-      children: [
-        SpeedDialChild(
-          child: const Icon(Icons.money_off),
-          label: 'Nova Despesa',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
-        ),
-        SpeedDialChild(
-          child: const Icon(Icons.attach_money),
-          label: 'Nova Receita',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomeScreen())),
-        ),
-        SpeedDialChild(
-          child: const Icon(Icons.flag),
-          label: 'Nova Meta',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalScreen())),
-        ),
-      ],
-    );
-  }
-
-  // ✅ WIDGETS DE UI ADAPTADOS - AGORA RECEBEM OS DADOS DOS STREAMS
-  
-  // (O restante dos widgets: _buildBudgetIndicator, _buildChart, _buildTransactionHistory, permanecem os mesmos da versão anterior)
   Widget _buildBudgetIndicator(double totalGasto, double limiteOrcamento) {
     double percentage = limiteOrcamento == 0 ? 0 : totalGasto / limiteOrcamento;
     if (percentage > 1) percentage = 1;
