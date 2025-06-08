@@ -1,5 +1,3 @@
-// home_screen.dart (VERSÃO COM O LAYOUT CORRIGIDO)
-
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:my_finances/screens/add_expense_screen.dart';
@@ -124,8 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      // ✅ 1. APPBAR PRINCIPAL RESTAURADA
-      // Ela só vai aparecer na primeira tela (Home)
       appBar: _currentIndex == 0
           ? AppBar(
               backgroundColor: const Color(0xFF2E8B57),
@@ -188,7 +184,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ✅ 2. APPBAR DUPLICADA REMOVIDA DE DENTRO DESTE WIDGET
   Widget _buildHomeScreenContent() {
     if (user == null) return const Center(child: Text("Usuário não logado."));
     return StreamBuilder<QuerySnapshot>(
@@ -236,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // A AppBar que estava aqui foi removida.
                       _buildBudgetIndicator(totalDespesas, totalReceitas),
                       const SizedBox(height: 16),
                       _buildGoalProgressIndicator(metasDocs),

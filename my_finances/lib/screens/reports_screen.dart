@@ -1,9 +1,6 @@
-// reports_screen.dart (VERSÃO CORRIGIDA E DEFINITIVA)
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 
 enum SortOptions { data, valor, nome }
 
@@ -36,8 +33,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
-  // ✅ LÓGICA DA QUERY TOTALMENTE REFEITA
   Query _buildFirestoreQuery() {
     Query query = FirebaseFirestore.instance
         .collection('despesas')
@@ -46,7 +41,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // SE O USUÁRIO ESTIVER PESQUISANDO POR TEXTO...
     if (_searchQuery.isNotEmpty) {
       String queryLowerCase = _searchQuery.toLowerCase();
-      // Aplica o filtro de texto e FORÇA a ordenação por nome
       query = query
           .where('nome_lowercase', isGreaterThanOrEqualTo: queryLowerCase)
           .where('nome_lowercase', isLessThanOrEqualTo: '$queryLowerCase\uf8ff')
@@ -72,7 +66,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // A estrutura do build continua a mesma
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -115,7 +108,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ✅ PAINEL DE PESQUISA COM BOTÕES DESATIVADOS DINAMICAMENTE
   Widget _buildSearchPanel() {
   final bool isSearching = _searchQuery.isNotEmpty;
 
@@ -127,7 +119,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, // Alinha o texto à esquerda
         children: [
-          // Campo de Texto para a Pesquisa (continua igual)
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -148,7 +139,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           const SizedBox(height: 16),
           
-          // ✅ AQUI ESTÁ A MUDANÇA: Usando Wrap para a linha de ordenação
           Wrap(
             spacing: 8.0, // Espaçamento horizontal entre os itens
             runSpacing: 4.0, // Espaçamento vertical se quebrar a linha
@@ -186,7 +176,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
   );
 }
 
-  // O widget _buildResultCard continua o mesmo
   Widget _buildResultCard(Map<String, dynamic> data) {
     final String dataFormatada = data['data'] ?? 'Sem data';
     final double valor = (data['valor'] as num?)?.toDouble() ?? 0.0;

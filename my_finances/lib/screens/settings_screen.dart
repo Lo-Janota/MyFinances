@@ -34,7 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       final String body = "Nome: ${_nameController.text}\n\nMensagem:\n${_messageController.text}";
       final Uri emailUri = Uri(
         scheme: 'mailto',
-        path: 'lorenzo.janota@icloud.com', // Mantido seu e-mail
+        path: 'lorenzo.janota@icloud.com',
         query: 'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
       );
 
@@ -65,7 +65,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    // Definindo a cor primária para reutilização
     final Color primaryColor = const Color(0xFF2E8B57);
 
     return Scaffold(
@@ -91,14 +90,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
-  // --- ABA "SOBRE O APP" REFEITA ---
   Widget _buildAboutSection(BuildContext context) {
     final Color primaryColor = const Color(0xFF2E8B57);
 
-    return ListView( // Usar ListView é melhor que SingleChildScrollView para listas de conteúdo
+    return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        // Card do Header
         Card(
           elevation: 0,
           color: Colors.green.shade50,
@@ -175,8 +172,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
-
-  // --- ABA "SUGESTÕES" REFEITA ---
   Widget _buildSuggestionsForm(BuildContext context) {
     final Color primaryColor = const Color(0xFF2E8B57);
 

@@ -14,7 +14,6 @@ class HistoryScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Meus Lançamentos'),
           backgroundColor: const Color(0xFF2E8B57),
-          // A TabBar cria os botões das abas no topo.
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Despesas', icon: Icon(Icons.arrow_downward)),
@@ -22,7 +21,6 @@ class HistoryScreen extends StatelessWidget {
             ],
           ),
         ),
-        // A TabBarView contém o conteúdo de cada aba.
         body: const TabBarView(
           children: [
             // Conteúdo da primeira aba
@@ -36,7 +34,6 @@ class HistoryScreen extends StatelessWidget {
   }
 }
 
-// Widget reutilizável para exibir a lista de uma coleção
 class TransactionList extends StatelessWidget {
   final String collectionName;
   const TransactionList({super.key, required this.collectionName});
@@ -71,8 +68,6 @@ class TransactionList extends StatelessWidget {
     
           children: snapshot.data!.docs.map((DocumentSnapshot document) {
             Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
-            
-            // O nome do campo pode ser 'nome' (em despesas) ou 'descricao' (em receitas)
             String title = data['nome'] ?? data['descricao'] ?? 'Sem Título';
 
             return Card(

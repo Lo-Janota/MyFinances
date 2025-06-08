@@ -3,9 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  // O construtor continua o mesmo, útil para a função de editar
   final Map<String, dynamic>? existingExpense;
-  final String? docId; // Adicione docId para saber qual documento editar
+  final String? docId; 
 
   const AddExpenseScreen({super.key, this.existingExpense, this.docId});
 
@@ -40,14 +39,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
-  // ✅ FUNÇÃO DE SALVAR MODIFICADA
   Future<void> _saveExpense() async {
-    // 1. Valida o formulário
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // 2. Pega o usuário logado
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,8 +57,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     setState(() => _isLoading = true);
     final nomeOriginal = _nomeController.text;
-
-    // 3. Monta o objeto com os 5+ campos, incluindo o userId
     final expenseData = {
       'userId': user.uid,
       'nome': nomeOriginal,
@@ -75,16 +69,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     try {
       final firestore = FirebaseFirestore.instance;
       
-      // Se estiver editando, usa 'update'. Se for novo, usa 'add'.
       if (widget.docId != null) {
         // Lógica de Edição
         await firestore.collection('despesas').doc(widget.docId).update(expenseData);
       } else {
-        // ✅ Requisito 1: Inserção na coleção 'despesas'
         await firestore.collection('despesas').add(expenseData);
       }
-
-      // ✅ Requisito 3: Mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Despesa salva com sucesso!'),
@@ -95,7 +85,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       if (mounted) Navigator.pop(context, true);
 
     } catch (e) {
-      // ✅ Requisito 3: Mensagem de erro
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Ocorreu um erro ao salvar: $e'),

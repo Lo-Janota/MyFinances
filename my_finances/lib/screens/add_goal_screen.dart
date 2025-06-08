@@ -60,7 +60,6 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
     try {
       final firestore = FirebaseFirestore.instance;
-      // ✅ Salva na coleção 'metas'
       if (widget.docId != null) {
         await firestore.collection('metas').doc(widget.docId).update(goalData);
       } else {
@@ -86,7 +85,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.existingGoal != null ? 'Editar Meta' : 'Nova Meta/Orçamento'),
-        backgroundColor: const Color(0xFF4682B4), // Um azul para diferenciar
+        backgroundColor: const Color(0xFF4682B4), 
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

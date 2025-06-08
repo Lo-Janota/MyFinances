@@ -61,7 +61,6 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
 
     try {
       final firestore = FirebaseFirestore.instance;
-      // ✅ Salva na coleção 'receitas'
       if (widget.docId != null) {
         await firestore.collection('receitas').doc(widget.docId).update(incomeData);
       } else {
@@ -87,7 +86,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.existingIncome != null ? 'Editar Receita' : 'Nova Receita'),
-        backgroundColor: const Color(0xFF3CB371), // Um verde mais claro
+        backgroundColor: const Color(0xFF3CB371),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
