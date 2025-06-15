@@ -257,53 +257,77 @@ class _HomeScreenState extends State<HomeScreen> {
     if (metas.isEmpty) {
       return const SizedBox.shrink();
     }
-    final meta = metas.first.data() as Map<String, dynamic>;
-    final titulo = meta['titulo'] ?? 'Minha Meta';
-    final valorAtual = (meta['valorAtual'] ?? 0.0).toDouble();
-    final valorAlvo = (meta['valorAlvo'] ?? 0.0).toDouble();
+
+    final goalDoc = metas.first;
+    final metaData = goalDoc.data() as Map<String, dynamic>;
+
+    final titulo = metaData['titulo'] ?? 'Minha Meta';
+    final valorAtual = (metaData['valorAtual'] ?? 0.0).toDouble();
+    final valorAlvo = (metaData['valorAlvo'] ?? 0.0).toDouble();
     double percentage = valorAlvo == 0 ? 1 : valorAtual / valorAlvo;
     if (percentage > 1) percentage = 1;
 
     return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Meta: $titulo",
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4682B4)),
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: percentage,
-              minHeight: 10,
-              backgroundColor: Colors.grey[300],
-              color: const Color(0xFF4682B4),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  // ✅ FORMATAÇÃO APLICADA AQUI
-                  NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valorAtual),
+    elevation: 2,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 16), // Ajuste no padding
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ✅ AQUI ESTÁ A MUDANÇA
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Título da Meta
+              Text(
+                "Meta: $titulo",
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4682B4)),
+              ),
+
+              // O seu IconButton, perfeitamente colocado aqui
+              IconButton(
+                icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddGoalScreen(
+                          existingGoal: metaData, // 'item' do seu código é 'metaData' aqui
+                          docId: goalDoc.id),   // 'doc.id' do seu código é 'goalDoc.id' aqui
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          // O resto do widget continua igual
+          LinearProgressIndicator(
+            value: percentage,
+            minHeight: 10,
+            backgroundColor: Colors.grey[300],
+            color: const Color(0xFF4682B4),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                  NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
+                      .format(valorAtual),
                   style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  // ✅ E AQUI
-                  'Alvo: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valorAlvo)}',
-                ),
-              ],
-            )
-          ],
-        ),
+              Text(
+                'Alvo: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valorAlvo)}',
+              ),
+            ],
+          )
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBudgetIndicator(double totalGasto, double limiteOrcamento) {
     double percentage = limiteOrcamento == 0 ? 0 : totalGasto / limiteOrcamento;
