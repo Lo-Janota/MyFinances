@@ -10,6 +10,7 @@ import 'package:my_finances/screens/transactions/history_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -211,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       despesasSnapshot.error ??
                       metasSnapshot.error;
                   return Center(child: Text("Ocorreu um erro: $error"));
-                }
+              }
                 if (!receitasSnapshot.hasData ||
                     !despesasSnapshot.hasData ||
                     !metasSnapshot.hasData) {
@@ -288,9 +289,14 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('R\$ ${valorAtual.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Alvo: R\$ ${valorAlvo.toStringAsFixed(2)}'),
+                Text(
+                  // ✅ FORMATAÇÃO APLICADA AQUI
+                  NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valorAtual),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  // ✅ E AQUI
+                  'Alvo: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valorAlvo)}',
+                ),
               ],
             )
           ],
@@ -307,7 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Balanço Mensal (Receitas): R\$${limiteOrcamento.toStringAsFixed(2)}',
+          // ✅ FORMATAÇÃO APLICADA AQUI
+          'Balanço Mensal (Receitas): ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(limiteOrcamento)}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
@@ -318,7 +325,10 @@ class _HomeScreenState extends State<HomeScreen> {
           minHeight: 10,
         ),
         const SizedBox(height: 4),
-        Text('Total de Despesas: R\$${totalGasto.toStringAsFixed(2)}'),
+        Text(
+          // ✅ E AQUI
+          'Total de Despesas: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(totalGasto)}',
+        ),
       ],
     );
   }
@@ -391,8 +401,10 @@ class _HomeScreenState extends State<HomeScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('R\$${(item['valor'] ?? 0.0).toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  // ✅ FORMATAÇÃO APLICADA AQUI
+                  NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(item['valor'] ?? 0.0),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
                   onPressed: () {

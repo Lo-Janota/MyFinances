@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final Map<String, dynamic>? existingExpense;
@@ -18,17 +21,51 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   late TextEditingController _valorController;
   late TextEditingController _categoriaController;
   late TextEditingController _dataController;
+  bool _isLoading = false;
 
-  bool _isLoading = false; // Para feedback visual (loading)
+  final moneyFormatter = MoneyInputFormatter(
+  thousandSeparator: ThousandSeparator.Period, // ponto para milhar
+  mantissaLength: 2,
+  leadingSymbol: '',
+  useSymbolPadding: false,
+);
 
   @override
   void initState() {
     super.initState();
-    _nomeController = TextEditingController(text: widget.existingExpense?['nome'] ?? '');
-    _valorController = TextEditingController(text: widget.existingExpense?['valor']?.toString() ?? '');
-    _categoriaController = TextEditingController(text: widget.existingExpense?['categoria'] ?? '');
-    _dataController = TextEditingController(text: widget.existingExpense?['data'] ?? '');
+
+    _nomeController = TextEditingController(
+      text: widget.existingExpense?['nome'] ?? '',
+    );
+
+    _categoriaController = TextEditingController(
+      text: widget.existingExpense?['categoria'] ?? '',
+    );
+
+    _dataController = TextEditingController(
+      text: widget.existingExpense?['data'] ?? '',
+    );
+
+    if (widget.existingExpense != null) {
+      // Se sim, formata e exibe o valor existente
+      final initialValue = widget.existingExpense?['valor'] ?? 0.0;
+      final String valorComVirgula = initialValue
+          .toStringAsFixed(2)
+          .replaceAll('.', ',');
+      _valorController = TextEditingController(
+        text: toCurrencyString(
+          initialValue.toString(),
+          thousandSeparator: ThousandSeparator.Period,
+          mantissaLength: 2,
+          leadingSymbol: '',
+        ),
+      );
+    } else {
+      // Se for uma nova receita, o campo começa vazio
+      _valorController = TextEditingController();
+    }
   }
+
 
   @override
   void dispose() {
@@ -56,12 +93,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
 
     setState(() => _isLoading = true);
+
+    final String valorFormatado = _valorController.text;
+    // Remove os pontos de milhar e troca a vírgula por ponto para salvar no Firebase
+    final String valorLimpo = valorFormatado.replaceAll('.', '').replaceAll(',', '.');
+    final double valorNumerico = double.tryParse(valorLimpo) ?? 0.0;
+
     final nomeOriginal = _nomeController.text;
     final expenseData = {
       'userId': user.uid,
       'nome': nomeOriginal,
       'nome_lowercase': nomeOriginal.toLowerCase(),
-      'valor': double.tryParse(_valorController.text) ?? 0.0,
+      'valor': valorNumerico,
       'categoria': _categoriaController.text,
       'data': _dataController.text,
       'criadoEm': FieldValue.serverTimestamp(),
@@ -116,8 +159,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
               TextFormField(
                 controller: _valorController,
+                inputFormatters: [moneyFormatter], // Aplica a máscara
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Valor (R\$)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) => value == null || value.isEmpty ? 'Informe um valor' : null,
               ),
               TextFormField(

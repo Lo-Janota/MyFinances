@@ -144,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ListTile(
                 leading: Icon(Icons.info_outline, color: primaryColor),
                 title: const Text("Versão do Aplicativo"),
-                trailing: const Text("2.0.0", style: TextStyle(color: Colors.grey)),
+                trailing: const Text("Beta", style: TextStyle(color: Colors.grey)),
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(

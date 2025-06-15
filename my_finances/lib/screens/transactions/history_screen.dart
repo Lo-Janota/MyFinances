@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -70,21 +71,33 @@ class TransactionList extends StatelessWidget {
             Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
             String title = data['nome'] ?? data['descricao'] ?? 'Sem Título';
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: ListTile(
-                title: Text(title),
-                subtitle: Text(data['categoria'] ?? data['origem'] ?? 'Geral'),
-                trailing: Text(
-                  'R\$ ${(data['valor'] ?? 0.0).toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: collectionName == 'despesas' ? Colors.red : Colors.green,
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                ),
-              ),
-            );
-          }).toList(), 
+                  child: ListTile(
+                    title: Text(title),
+                    subtitle: Text(
+                      data['categoria'] ?? data['origem'] ?? 'Geral',
+                    ),
+                    trailing: Text(
+                      // ✅ AQUI ESTÁ A MUDANÇA
+                      NumberFormat.currency(
+                        locale: 'pt_BR',
+                        symbol: 'R\$',
+                      ).format(data['valor'] ?? 0.0),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            collectionName == 'despesas'
+                                ? Colors.red
+                                : Colors.green,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
         );
       },
     );

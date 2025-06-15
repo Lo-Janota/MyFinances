@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 
 class AddGoalScreen extends StatefulWidget {
   final Map<String, dynamic>? existingGoal;
@@ -21,14 +24,48 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
   bool _isLoading = false;
 
+  final moneyFormatter = MoneyInputFormatter(
+  thousandSeparator: ThousandSeparator.Period, // ponto para milhar
+  mantissaLength: 2,
+  leadingSymbol: '',
+  useSymbolPadding: false,
+);
+
   @override
-  void initState() {
-    super.initState();
-    _tituloController = TextEditingController(text: widget.existingGoal?['titulo'] ?? '');
-    _valorAlvoController = TextEditingController(text: widget.existingGoal?['valorAlvo']?.toString() ?? '');
-    _valorAtualController = TextEditingController(text: widget.existingGoal?['valorAtual']?.toString() ?? '0.0'); // Começa com 0
-    _prazoController = TextEditingController(text: widget.existingGoal?['prazo'] ?? '');
+void initState() {
+  super.initState();
+
+  _tituloController =
+      TextEditingController(text: widget.existingGoal?['titulo'] ?? '');
+  _prazoController =
+      TextEditingController(text: widget.existingGoal?['prazo'] ?? '');
+
+  if (widget.existingGoal != null) {
+    final initialValueAlvo = widget.existingGoal?['valorAlvo'] ?? 0.0;
+    _valorAlvoController = TextEditingController(
+      text: toCurrencyString(
+        initialValueAlvo.toString(),
+        thousandSeparator: ThousandSeparator.Period,
+        mantissaLength: 2,
+        leadingSymbol: '',
+      ),
+    );
+
+    final initialValueAtual = widget.existingGoal?['valorAtual'] ?? 0.0;
+    _valorAtualController = TextEditingController(
+      text: toCurrencyString(
+        initialValueAtual.toString(),
+        thousandSeparator: ThousandSeparator.Period,
+        mantissaLength: 2,
+        leadingSymbol: '',
+      ),
+    );
+  } else {
+    _valorAlvoController = TextEditingController();
+    _valorAtualController = TextEditingController();
   }
+}
+    
 
   @override
   void dispose() {
@@ -50,11 +87,19 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
     setState(() => _isLoading = true);
 
+    final String valorAlvoFormatado = _valorAlvoController.text;
+    final String valorAlvoLimpo = valorAlvoFormatado.replaceAll('.', '').replaceAll(',', '.');
+    final double valorAlvoNumerico = double.tryParse(valorAlvoLimpo) ?? 0.0;
+    
+    final String valorAtualFormatado = _valorAtualController.text;
+    final String valorAtualLimpo = valorAtualFormatado.replaceAll('.', '').replaceAll(',', '.');
+    final double valorAtualNumerico = double.tryParse(valorAtualLimpo) ?? 0.0;
+
     final goalData = {
       'userId': user.uid,
       'titulo': _tituloController.text,
-      'valorAlvo': double.tryParse(_valorAlvoController.text) ?? 0.0,
-      'valorAtual': double.tryParse(_valorAtualController.text) ?? 0.0,
+      'valorAlvo': valorAlvoNumerico, // Salva o valor numérico
+      'valorAtual': valorAtualNumerico, // Salva o valor numérico
       'prazo': _prazoController.text,
     };
 
@@ -95,19 +140,25 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
             children: [
               TextFormField(
                 controller: _tituloController,
-                decoration: const InputDecoration(labelText: 'Título da Meta (Ex: Viagem)'),
+                decoration: const InputDecoration(
+                    labelText: 'Título da Meta (Ex: Viagem)'),
                 validator: (v) => v!.isEmpty ? 'Defina um título' : null,
               ),
+              // ✅ 3. CAMPO DE VALOR ALVO COM A MÁSCARA
               TextFormField(
                 controller: _valorAlvoController,
                 decoration: const InputDecoration(labelText: 'Valor Alvo (R\$)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [moneyFormatter],
+                keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Defina o valor alvo' : null,
               ),
+              // ✅ 3. CAMPO DE VALOR ATUAL COM A MÁSCARA
               TextFormField(
                 controller: _valorAtualController,
-                decoration: const InputDecoration(labelText: 'Valor Já Economizado (R\$)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: 'Valor Já Economizado (R\$)'),
+                inputFormatters: [moneyFormatter],
+                keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Defina o valor atual' : null,
               ),
               TextFormField(

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
+
+
 
 class AddIncomeScreen extends StatefulWidget {
   final Map<String, dynamic>? existingIncome;
@@ -21,13 +26,41 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
 
   bool _isLoading = false;
 
+  final moneyFormatter = MoneyInputFormatter(
+  thousandSeparator: ThousandSeparator.Period, // ponto para milhar
+  mantissaLength: 2,
+  leadingSymbol: '',
+  useSymbolPadding: false,
+);
+
   @override
-  void initState() {
-    super.initState();
-    _descricaoController = TextEditingController(text: widget.existingIncome?['descricao'] ?? '');
-    _valorController = TextEditingController(text: widget.existingIncome?['valor']?.toString() ?? '');
-    _origemController = TextEditingController(text: widget.existingIncome?['origem'] ?? '');
-    _dataController = TextEditingController(text: widget.existingIncome?['data'] ?? '');
+void initState() {
+  super.initState();
+  _descricaoController =
+      TextEditingController(text: widget.existingIncome?['descricao'] ?? '');
+  _origemController =
+      TextEditingController(text: widget.existingIncome?['origem'] ?? '');
+  _dataController =
+      TextEditingController(text: widget.existingIncome?['data'] ?? '');
+
+  if (widget.existingIncome != null) {
+      // Se sim, formata e exibe o valor existente
+      final initialValue = widget.existingIncome?['valor'] ?? 0.0;
+      final String valorComVirgula = initialValue
+          .toStringAsFixed(2)
+          .replaceAll('.', ',');
+      _valorController = TextEditingController(
+        text: toCurrencyString(
+          initialValue.toString(),
+          thousandSeparator: ThousandSeparator.Period,
+          mantissaLength: 2,
+          leadingSymbol: '',
+        ),
+      );
+    } else {
+      // Se for uma nova receita, o campo começa vazio
+      _valorController = TextEditingController();
+    }
   }
 
   @override
@@ -50,10 +83,14 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
 
     setState(() => _isLoading = true);
 
+    final String valorFormatado = _valorController.text;
+    final String valorLimpo = valorFormatado.replaceAll('.', '').replaceAll(',', '.');
+    final double valorNumerico = double.tryParse(valorLimpo) ?? 0.0;
+
     final incomeData = {
       'userId': user.uid,
       'descricao': _descricaoController.text,
-      'valor': double.tryParse(_valorController.text) ?? 0.0,
+      'valor': valorNumerico, // Salva o valor numérico limpo
       'origem': _origemController.text,
       'data': _dataController.text,
       'criadoEm': FieldValue.serverTimestamp(),
@@ -102,7 +139,8 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
               TextFormField(
                 controller: _valorController,
                 decoration: const InputDecoration(labelText: 'Valor (R\$)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [moneyFormatter],
+                keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Informe um valor' : null,
               ),
               TextFormField(

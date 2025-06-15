@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 
 enum SortOptions { data, valor, nome }
 
@@ -186,11 +188,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-          child: Icon(Icons.local_mall_outlined, color: Theme.of(context).primaryColor),
+          child: Icon(
+            Icons.local_mall_outlined,
+            color: Theme.of(context).primaryColor,
+          ),
         ),
-        title: Text(data['nome'] ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${data['categoria'] ?? 'Geral'}  •  $dataFormatada', style: const TextStyle(color: Colors.grey)),
-        trailing: Text('R\$ ${valor.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 15)),
+        title: Text(
+          data['nome'] ?? 'Sem nome',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${data['categoria'] ?? 'Geral'}  •  $dataFormatada',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        trailing: Text(
+          // ✅ AQUI ESTÁ A ALTERAÇÃO
+          NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(valor),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.redAccent,
+            fontSize: 15,
+          ),
+        ),
       ),
     );
   }
